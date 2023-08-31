@@ -1,45 +1,41 @@
-import React, { ChangeEvent, FormEvent, useEffect, useState } from "react"
+import React, { ChangeEvent, useEffect, useState } from "react"
 import { loadData } from "../services/Api.service";
-import { Data } from "../interfaces/Form.interface";
+import { AddressDetails, Data } from "../interfaces/Form.interface";
 
 import './form.css'
+import { useTranslation } from "react-i18next";
 
 const FormComponent: React.FC = () => {
-    const [isNNIAddress, setNNIAddress] = useState(false);
-    const [postalCode, setPostalCode] = useState('');
-    const [selectedAddressID, setSelectedAddress] = useState('default');
-    const [address, setAddress] = useState<Data[]>([]);
+    const { t } = useTranslation();
 
-    const handleChange = (event: ChangeEvent<HTMLInputElement>) => {
-        setNNIAddress(event.target.checked);
+    const [postalCode, setPostalCode] = useState('');
+    const [{ address, isNNIAddress, selectedAddressID }, setAddressDetails] = useState<AddressDetails>({ isNNIAddress: false, selectedAddressID: 'default', address: [] });
+
+    const handleChange = (event: ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+        const isCheckbox = event.target.type === 'checkbox';
+        const value = event.target instanceof HTMLInputElement && isCheckbox ? event.target.checked : event.target.value;
+        setAddressDetails(lastState => ({ ...lastState, [event.target.name]: value }));
     }
 
     const handlePostCodeChange = (event: ChangeEvent<HTMLInputElement>) => {
         setPostalCode(event.target.value);
     }
 
-    const handleDropDownChange = (event: ChangeEvent<HTMLSelectElement>) => {
-        setSelectedAddress(event.target.value);
-    }
-
-    const submit = (event: FormEvent<HTMLButtonElement>) => {
+    const submit = () => {
         const selectedAddress = address.find(item => item.id === selectedAddressID);
         alert(JSON.stringify(selectedAddress, null, 2));
     }
 
-    const isValid = () => (postalCode === '' || selectedAddressID === 'default')
+    const isValid = () => (postalCode === '' || selectedAddressID === 'default');
 
     useEffect(() => {
         const loadDropDownData = async () => {
-            setAddress([]);
-            setSelectedAddress('default');
             const data = (await loadData(!isNNIAddress)) as Data[];
-            setAddress(data);
+            setAddressDetails(lastState => ({ ...lastState, selectedAddressID: 'default', address: data }));
         };
         loadDropDownData();
     }, [isNNIAddress]);
 
-    const defaultOption = <option value='default' key={'default'}>Please Select a Address</option>
     return (
         <div className="form-container">
             <div className="form-group">
@@ -47,24 +43,24 @@ const FormComponent: React.FC = () => {
             </div>
             <div className="form-group">
                 <div className="form-control">
-                    <input type="checkbox" name="isNNI" onChange={handleChange} checked={isNNIAddress} style={{ height: '25px', width: '25px' }} />
+                    <input type="checkbox" name="isNNIAddress" onChange={handleChange} checked={isNNIAddress} style={{ height: '25px', width: '25px' }} />
                     <label style={{ position: 'absolute', marginTop: '8px', marginLeft: '7px' }}>
                         Is NNI address?
                     </label>
                 </div>
             </div>
             <div className="form-group">
-                <select value={selectedAddressID} onChange={handleDropDownChange} className="form-control">
-                    {!address.length && defaultOption}
-                    {address.length && [defaultOption, ...address.map((item, index) => {
+                <select value={selectedAddressID} onChange={handleChange} name="selectedAddressID" className="form-control">
+                    {<option value='default' key={'default'}>{t('form.checkboxDefault')}</option>}
+                    {address.length && address.map((item, index) => {
                         return <option value={item.id} key={index}>{item.value}</option>
-                    })]}
+                    })}
                 </select>
             </div>
             <div className="form-group">
-                <button type="submit" onClick={submit} disabled={isValid()} className="form-control">Submit</button>
+                <button type="submit" onClick={submit} disabled={isValid()} className="form-control">{t('form.submit')}</button>
             </div>
-        </div >)
+        </div >);
 }
 
 export default FormComponent;
